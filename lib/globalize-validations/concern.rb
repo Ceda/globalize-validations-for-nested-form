@@ -19,14 +19,7 @@ module Globalize
                   end
         locales ||= []
 
-        globalized_errors = globalized_errors_for_locales(translated_attribute_names, locales)
-
-        # Add translated attributes errors back to the object
-        globalized_errors.each do |attribute, messages|
-          messages.each do |message|
-            errors.add(attribute, message)
-          end
-        end
+        globalized_errors_for_locales(translated_attribute_names, locales)
       end
 
       # Return all translated attributes with errors for the given locales,
@@ -35,20 +28,16 @@ module Globalize
         locales.map!(&:to_s)
         additional_locales = locales - [I18n.locale.to_s]
 
-        {}.tap do |globalized_errors|
-          if locales.include? I18n.locale.to_s
-            # Track errors for current locale
-            globalized_errors.merge! globalized_errors_for_locale(attribute_names, I18n.locale)
-          end
+        if locales.include? I18n.locale.to_s
+          # Track errors for current locale
+          globalized_errors_for_locale(attribute_names, I18n.locale)
+        end
 
-          # Validates the given object against each locale except the current one
-          # and track their errors
-          additional_locales.each do |locale|
-            Globalize.with_locale(locale) do
-              if invalid?
-                globalized_errors.merge! globalized_errors_for_locale(attribute_names, locale)
-              end
-            end
+        # Validates the given object against each locale except the current one
+        # and track their errors
+        additional_locales.each do |locale|
+          Globalize.with_locale(locale) do
+            globalized_errors_for_locale(attribute_names, locale) if invalid?
           end
         end
       end
@@ -56,11 +45,11 @@ module Globalize
       # Return all translated attributes with errors for the given locale,
       # including their error messages
       def globalized_errors_for_locale(translated_attribute_names, locale)
-        {}.tap do |globalized_errors|
-          translated_attribute_names.each do |attribute|
-            if (error = errors.messages.delete(attribute.to_sym)).present?
-              globalized_errors["#{attribute}_#{locale.to_s.underscore}".to_sym] = error
-            end
+        errors.add(:base, :invalid)
+
+        translated_attribute_names.each do |attribute|
+          errors.messages.delete(attribute.to_sym).to_a.each do |error|
+            translation.errors.add(attribute, error)
           end
         end
       end
