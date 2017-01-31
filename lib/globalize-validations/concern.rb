@@ -45,10 +45,10 @@ module Globalize
       # Return all translated attributes with errors for the given locale,
       # including their error messages
       def globalized_errors_for_locale(translated_attribute_names, locale)
-        errors.add(:base, :invalid)
 
         translated_attribute_names.each do |attribute|
           errors.messages.delete(attribute.to_sym).to_a.each do |error|
+            errors.add(:base, :invalid)
             translation.errors.add(attribute, error)
           end
         end
